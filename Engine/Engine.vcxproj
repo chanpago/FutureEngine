@@ -331,7 +331,7 @@
     <ClCompile Include="ImGui\imgui_widgets.cpp" />
     <ClCompile Include="Private\\Level\\Level.cpp" />
     <ClCompile Include="Private\\Manager\Input\\InputManager.cpp" />
-    <ClCompile Include="Private\Manager\Level\World .cpp" />
+    <ClCompile Include="Private\Manager\Level\World.cpp" />
     <ClCompile Include="Private\\Manager\Path\\PathManager.cpp" />
     <ClCompile Include="Private\\Manager\Time\\TimeManager.cpp" />
     <ClCompile Include="Private\\Manager\UI\\UIManager.cpp" />

@@ -45,23 +45,52 @@ void UWorld::Init(EWorldType Type)
 	GEditor->AddWorldContext(WorldContext);
 }
  
-void UWorld::Update() const
-{
-	if (CurrentLevel)
-	{
-		CurrentLevel->Update();
-	}
-}
+//void UWorld::Update() const
+//{
+//	if (CurrentLevel)
+//	{
+//		CurrentLevel->Update();
+//	}
+//}
 
 void UWorld::Tick()
 {
-	for (AActor* Actor : CurrentLevel->GetLevelActors())
-	{
-		if (Actor && Actor->IsActorTickEnabled())
-		{
-			Actor->Tick();
 
+	if (CurrentLevel)
+	{
+		//To Render
+		CurrentLevel->Update();
+	}
+	   
+	// Editor Tick  
+	if (GWorld && GWorld->GetWorldType() == EWorldType::Editor)
+	{
+		ULevel* Level = GWorld->GetCurrentLevel();
+		if (Level != nullptr)
+		{
+			for (AActor* Actor : Level->GetLevelActors())
+			{
+				if (Actor && Actor->IsTickInEditor())
+				{
+					Actor->Tick();
+				}
+			}
 		}
+	}
+
+	//PIE Tick
+	else if (GWorld && GWorld->GetWorldType() == EWorldType::PIE)
+	{
+		ULevel* Level = GWorld->GetCurrentLevel();
+		{
+			for (AActor* Actor : Level->GetLevelActors())
+			{
+				if (Actor)
+				{
+					Actor->Tick();
+				}
+			}
+		} 
 	}
 }
 /**
@@ -412,13 +441,13 @@ UWorld* UWorld::DuplicateWorldForPIE(UWorld* EditorWorld)
 	
 	Dst->SetCurrentLevel(DstLevel);
 
-	for (AActor* Actor : GWorld->GetCurrentLevel()->GetLevelActors())
+	for (AActor* Actor : SrcLevel->GetLevelActors())
 	{
 		//Actor->DuplicateForTest(Dst->GetCurrentLevel() , Actor); 
 		AActor* DupActor = static_cast<AActor*>(Actor->Duplicate());  
-		UPrimitiveComponent* test = Cast<UPrimitiveComponent>(DupActor->GetRootComponent());
-
-		DstLevel->AddToOctree(Cast<UPrimitiveComponent>(DupActor->GetRootComponent())); 
+		if (!DupActor) continue;
+		// Rebind duplicate to PIE level
+		DstLevel->AddActor(DupActor);
 	}
 
 	return Dst;
@@ -441,6 +470,16 @@ void UWorld::InitializeActorsForPlay()
 
 void UWorld::CleanUpWorld()
 { 
-	// 깊은 복사 부분만 다 날리기 
+	// 월드에 속한 모든 자원을 해제합니다.
+	// 현재는 레벨이 하나만 존재하므로 CurrentLevel만 정리합니다.
+	if (CurrentLevel)
+	{
+		// 1. 레벨의 Cleanup 함수를 호출하여 레벨 내의 모든 액터와 컴포넌트를 파괴합니다.
+		CurrentLevel->Cleanup();
+
+		// 2. 레벨 객체 자체의 메모리를 해제합니다.
+		delete CurrentLevel;
+		CurrentLevel = nullptr;
+	}
 }
 

@@ -365,10 +365,10 @@ void ULevel::RemoveFromRenderQueues(AActor* Owner)
 
 
 	//옥트리에서도 제거, 이거 안 하면 dangling 포인터 참조
-	/*for (UActorComponent* Component : Owner->GetOwnedComponents())
+	for (UActorComponent* Component : Owner->GetOwnedComponents())
 	{
 		StaticOctree.RemoveElement(Cast<UPrimitiveComponent>(Component));
-	}*/
+	}
 }
 
 

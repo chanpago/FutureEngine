@@ -100,6 +100,7 @@ public:
 			OctreeNodes[CurrentNodeIndex].TemporalElements.RemoveAt(ElementIndex);
 		}
 	}
+
 	void UpdateElement(T* Element)
 	{
 		/*UE_LOG("InOctree : %d, OutsizeOctree : %d, TempNum : %d", Elements.Num(), ElementsOutsideOctree.Num(), TemporalElementNum);

@@ -173,7 +173,7 @@
     <ClCompile Include="Private\\Manager\Input\\InputManager.cpp">
       <Filter>Private\Manager\Input</Filter>
     </ClCompile>
-    <ClCompile Include="Private\Manager\Level\World .cpp">
+    <ClCompile Include="Private\Manager\Level\World.cpp">
       <Filter>Private\Manager\Level</Filter>
     </ClCompile>
     <ClCompile Include="Private\\Manager\Path\\PathManager.cpp">
