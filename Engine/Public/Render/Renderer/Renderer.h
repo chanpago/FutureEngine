@@ -195,6 +195,8 @@ public:
 
 
 	void ReadbackIdBuffer();
+	bool UploadBillboardVertices(const void* VertexData, uint32 VertexCount, uint32 Stride);
+	void EnsureBillboardVertexBuffer(uint32 VertexCount, uint32 Stride);
 
 private:
 	//MSOC viewprot
@@ -251,6 +253,9 @@ private:
 	ID3D11Buffer* ConstantBufferCharTable = nullptr;
 	ID3D11Buffer* ConstantBufferBillboard = nullptr;
 
+	ID3D11Buffer* BillboardVertexBuffer = nullptr;
+	uint32 BillboardVertexBufferVertexCount = 0;
+	uint32 BillboardVertexBufferStride = 0;
 
 	std::vector<uint32> CachedIdBuffer;
 	/////////////////////////////////////

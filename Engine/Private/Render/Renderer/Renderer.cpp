@@ -21,6 +21,7 @@
 #include "Math/Octree.h"
 #include "Core/ObjectIterator.h"
 #include <algorithm>
+#include <cstring>
 #include "Core/Object.h"
 #include "Global/Enum.h"
 #include "Math/Math.h"
@@ -116,6 +117,11 @@ void URenderer::Release()
 	ReleaseConstantBuffer();
 
 	ReleaseResource();
+
+	ReleaseVertexBuffer(BillboardVertexBuffer);
+	BillboardVertexBuffer = nullptr;
+	BillboardVertexBufferVertexCount = 0;
+	BillboardVertexBufferStride = 0;
 
 	if (MultiViewRoot)
 	{
@@ -505,7 +511,12 @@ void URenderer::RenderBillboards(const FVector& CameraLocation)
             { P3, {U,     V    } },
         };
 
-        ID3D11Buffer* VB = CreateVertexBuffer(Vtx);
+        const uint32 VertexCount = static_cast<uint32>(Vtx.Num());
+        const uint32 VertexStride = sizeof(FVector) + sizeof(FVector2);
+        if (!UploadBillboardVertices(Vtx.data(), VertexCount, VertexStride))
+        {
+            continue;
+        }
 
         // Constant buffers
         Pipeline->SetConstantBuffer(0, true, ConstantBufferModels);
@@ -518,12 +529,67 @@ void URenderer::RenderBillboards(const FVector& CameraLocation)
         Pipeline->SetShaderResourceView(0, false, C->GetSpriteSRV());
         Pipeline->SetSamplerState(0, false, Samp);
 
-        // VB stride is 20 bytes
-        Pipeline->SetVertexBuffer(VB, sizeof(FVector) + sizeof(FVector2));
-        Pipeline->Draw(6, 0);
-
-        ReleaseVertexBuffer(VB);
+        Pipeline->SetVertexBuffer(BillboardVertexBuffer, VertexStride);
+        Pipeline->Draw(VertexCount, 0);
     }
+}
+
+bool URenderer::UploadBillboardVertices(const void* VertexData, uint32 VertexCount, uint32 Stride)
+{
+	if (VertexCount == 0 || Stride == 0)
+	{
+		return false;
+	}
+
+	EnsureBillboardVertexBuffer(VertexCount, Stride);
+	if (BillboardVertexBuffer == nullptr)
+	{
+		return false;
+	}
+
+	D3D11_MAPPED_SUBRESOURCE Mapped = {};
+	HRESULT hr = GetDeviceContext()->Map(BillboardVertexBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &Mapped);
+	if (FAILED(hr))
+	{
+		return false;
+	}
+
+	std::memcpy(Mapped.pData, VertexData, static_cast<size_t>(VertexCount) * static_cast<size_t>(Stride));
+	GetDeviceContext()->Unmap(BillboardVertexBuffer, 0);
+	return true;
+}
+
+void URenderer::EnsureBillboardVertexBuffer(uint32 VertexCount, uint32 Stride)
+{
+	if (VertexCount == 0 || Stride == 0)
+	{
+		return;
+	}
+
+	if (BillboardVertexBuffer && BillboardVertexBufferVertexCount >= VertexCount && BillboardVertexBufferStride == Stride)
+	{
+		return;
+	}
+
+	ReleaseVertexBuffer(BillboardVertexBuffer);
+	BillboardVertexBuffer = nullptr;
+	BillboardVertexBufferVertexCount = 0;
+	BillboardVertexBufferStride = 0;
+
+	D3D11_BUFFER_DESC Desc{};
+	Desc.ByteWidth = VertexCount * Stride;
+	Desc.Usage = D3D11_USAGE_DYNAMIC;
+	Desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	Desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+
+	HRESULT hr = GetDevice()->CreateBuffer(&Desc, nullptr, &BillboardVertexBuffer);
+	if (FAILED(hr))
+	{
+		return;
+	}
+
+	BillboardVertexBufferVertexCount = VertexCount;
+	BillboardVertexBufferStride = Stride;
 }
 
 void URenderer::RenderText(const FVector& CameraLocation)
