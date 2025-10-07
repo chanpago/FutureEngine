@@ -281,7 +281,6 @@
     <ClCompile Include="Private\Render\UI\Widget\MainBarWidget.cpp" />
     <ClCompile Include="Private\Render\UI\Window\LevelTabBarWindow.cpp" />
     <ClCompile Include="Private\Render\UI\Window\MainMenuWindow.cpp" />
-    <ClCompile Include="ViewportClinet.cpp" />
     <ClCompile Include="Global\Name.cpp" />
     <ClCompile Include="Global\NameTable.cpp" />
     <ClCompile Include="Global\Traits.cpp" />
@@ -310,6 +309,7 @@
     <ClCompile Include="Private\Render\UI\Widget\ViewSettingsWidget.cpp" />
     <ClCompile Include="Private\Render\UI\Window\DetailWindow.cpp" />
     <ClCompile Include="Private\Render\Viewport\Viewport.cpp" />
+    <ClCompile Include="Private\Render\Viewport\ViewportClinet.cpp" />
     <ClCompile Include="Private\\Core\\Class.cpp" />
     <ClCompile Include="Private\\Core\\Object.cpp" />
     <ClCompile Include="Private\\Editor\\Axis.cpp" />
