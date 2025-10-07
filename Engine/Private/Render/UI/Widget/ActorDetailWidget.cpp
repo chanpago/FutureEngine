@@ -80,8 +80,12 @@ void UActorDetailWidget::RenderActorInfo(AActor* SelectedActor)
 	}
 	if (ImGui::Button("Delete Component") && SelectedComponent)
 	{
-		SelectedActor->DestroyComponent(SelectedComponent);
-		SelectedComponent = nullptr;
+		// 선택된 엑터의 루트 컴포넌트가 아닐때에만 컴포넌트를 삭제합니다.
+		if (SelectedComponent != SelectedActor->GetRootComponent())
+		{
+			SelectedActor->DestroyComponent(SelectedComponent);
+			SelectedComponent = nullptr;
+		}
 	}
 	int ComponentIndex = -1;
 	if (ImGui::BeginPopup("ComponentList Popup"))
