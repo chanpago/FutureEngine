@@ -97,36 +97,67 @@ bool AActor::IsUniformScale() const
 
 void AActor::AddActorComponent(EComponentType InType, USceneComponent* InParentComponent)
 {
-	//원래 Add는 어떤 컴포넌트든 가능해야함(UActorCompoennt).
-	//근데 계층구조는 USceneCompoent만 가짐. 이걸 아직 어떻게 처리해야할지 모르겠어서 일단 캐스팅함
+	// 1. 컴포넌트 타입에 따라 기본 이름을 결정합니다.
+	FString BaseName;
+	switch (InType)
+	{
+	case EComponentType::StaticMesh:
+		BaseName = "StaticMeshComponent";
+		break;
+	case EComponentType::Text:
+		BaseName = "TextRenderComponent";
+		break;
+	case EComponentType::Billboard:
+		BaseName = "BillboardComponent";
+		break;
+	default:
+		return; // 유효하지 않은 타입
+	}
+
+	// 2. 고유한 이름을 생성합니다.
+	FString FinalName = BaseName;
+	int32 Suffix = 0;
+	bool bIsNameUnique = false;
+	while (!bIsNameUnique)
+	{
+		bIsNameUnique = true;
+		for (UActorComponent* ExistingComp : GetOwnedComponents())
+		{
+			if (ExistingComp && ExistingComp->GetName() == FinalName)
+			{
+				bIsNameUnique = false;
+				Suffix++;
+				FinalName = BaseName + FString(std::to_string(Suffix).c_str());
+				break; // 새로운 이름으로 다시 검사 시작
+			}
+		}
+	}
+
+	// 3. 고유한 이름으로 새 컴포넌트를 생성합니다.
 	USceneComponent* NewComponent = nullptr;
+	switch (InType)
+	{
+	case EComponentType::StaticMesh:
+		NewComponent = CreateDefaultSubobject<UStaticMeshComponent>(FinalName);
+		break;
+	case EComponentType::Text:
+		NewComponent = CreateDefaultSubobject<UTextRenderComponent>(FinalName);
+		break;
+	case EComponentType::Billboard:
+		NewComponent = CreateDefaultSubobject<UBillboardComponent>(FinalName);
+		break;
+	}
 
-    switch (InType)
-    {
-    case EComponentType::StaticMesh:
-        NewComponent = CreateDefaultSubobject<UStaticMeshComponent>("StaticMeshComponent");
-        break;
-    case EComponentType::Text:
-        NewComponent = CreateDefaultSubobject<UTextRenderComponent>("TextComponent");
-        break;
-    case EComponentType::Billboard:
-        NewComponent = CreateDefaultSubobject<UBillboardComponent>("BillboardComponent");
-        break;
-    default:
-        break;
-    }
-
-	//check(NewComponent);
-
+	// 4. 컴포넌트를 설정하고 옥트리에 등록합니다.
 	if (NewComponent)
 	{
 		NewComponent->SetOwner(this);
-		Cast<USceneComponent>(NewComponent)->SetParentAttachment(InParentComponent);
-		if (!RootComponent)
+		NewComponent->SetParentAttachment(InParentComponent);
+		if (!GetRootComponent())
 		{
 			SetRootComponent(NewComponent);
 		}
-		// 새로 추가된 컴포넌트를 옥트리에 등록합니다.                             
+
 		ULevel* MyLevel = GetLevel();
 		if (MyLevel && NewComponent->IsA(UPrimitiveComponent::StaticClass()))
 		{
