@@ -416,3 +416,18 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Project Build Output
+Build/
+
+# ImGui
+imgui.ini
+
+# Warp
+WARP.md
+
+# AGENTS.MD
+AGENTS.md
+
+#Documents
+Document/*

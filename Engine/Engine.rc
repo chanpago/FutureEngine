@@ -1,0 +1,48 @@
+#include "resource.h"
+#include "winres.h"
+
+// Korean Resource
+LANGUAGE LANG_KOREAN, SUBLANG_DEFAULT
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+IDI_ICON1               ICON                    "Asset\\Icon\\EngineCH.ico"
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// 버전 정보
+//
+VS_VERSION_INFO VERSIONINFO
+    FILEVERSION 1,0,0,1
+    PRODUCTVERSION 1,0,0,1
+    FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+    FILEFLAGS 0x1L
+#else
+    FILEFLAGS 0x0L
+#endif
+    FILEOS 0x40004L
+    FILETYPE 0x1L
+    FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "041204B0" // 한국어, 유니코드
+        BEGIN
+            VALUE "CompanyName", "Future Project"
+            VALUE "FileDescription", "Future Engine"
+            VALUE "FileVersion", "1.0.0.1"
+            VALUE "InternalName", "Engine.exe"
+            VALUE "LegalCopyright", "Copyright (C) 2025"
+            VALUE "OriginalFilename", "Engine.exe"
+            VALUE "ProductName", "Future Engine"
+            VALUE "ProductVersion", "1.0.0.1"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x412, 1200
+    END
+END

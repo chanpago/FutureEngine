@@ -1,0 +1,55 @@
+{
+  "Version": 1,
+  "NextUUID": 7,
+  "Primitives": {
+    "1": {
+      "ObjStaticMeshAsset": "Data/cube-tex.obj",
+      "Location": [ -4.987487, 0.635853, -3.066957 ],
+      "Rotation": [ 0.000000, 0.000000, 0.000000 ],
+      "Scale": [ 1.713111, 1.713111, 1.713111 ],
+      "Type": "StaticMeshComp"
+    },
+    "2": {
+      "ObjStaticMeshAsset": "Data/sphere.obj",
+      "Location": [ 0.850093, -0.201270, -1.497085 ],
+      "Rotation": [ 0.000000, 0.000000, 0.000000 ],
+      "Scale": [ 1.843944, 1.843944, 1.843944 ],
+      "Type": "StaticMeshComp"
+    },
+    "3": {
+      "ObjStaticMeshAsset": "Data/triangle.obj",
+      "Location": [ 3.228400, 2.466048, -3.258919 ],
+      "Rotation": [ 0.000000, 0.000000, 0.000000 ],
+      "Scale": [ 1.788415, 1.788415, 1.788415 ],
+      "Type": "StaticMeshComp"
+    },
+    "4": {
+      "ObjStaticMeshAsset": "Data/square.obj",
+      "Location": [ 2.105014, 0.135350, -1.960051 ],
+      "Rotation": [ 0.000000, 0.000000, 0.000000 ],
+      "Scale": [ 0.522477, 0.522477, 0.522477 ],
+      "Type": "StaticMeshComp"
+    },
+    "5": {
+      "ObjStaticMeshAsset": "Data/minion.obj",
+      "Location": [ -4.085971, -1.355480, -3.526871 ],
+      "Rotation": [ 0.000000, 0.000000, 0.000000 ],
+      "Scale": [ 0.748848, 0.748848, 0.748848 ],
+      "Type": "StaticMeshComp"
+    },
+    "6": {
+      "ObjStaticMeshAsset": "Data/trees9.obj",
+      "Location": [ 4.885250, -0.543077, -3.809168 ],
+      "Rotation": [ 0.000000, 0.000000, 0.000000 ],
+      "Scale": [ 0.507004, 0.507004, 0.507004 ],
+      "Type": "StaticMeshComp"
+    }
+  },
+  "PerspectiveCamera": {
+    "Location": [ -10.796840, -0.575500, 7.018025 ],
+    "Rotation": [ 12.087000, 4.437000, 0.000000 ],
+    "FOV": 60.0,
+    "NearClip": 0.100000,
+    "FarClip": 1000.000000
+  }
+}

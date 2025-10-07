@@ -1,0 +1,58 @@
+주제: AActor::DuplicateSubObjects에서 RootComponent Duplicate 시 어떤 Duplicate가 불려야 하는가
+
+핵심 결론
+- RootComponent는 씬 트랜스폼/계층(부모-자식)을 담당하므로, 기본 복제 책임은 USceneComponent 레벨에 있습니다.
+- 따라서 RootComponent->Duplicate() 호출 시, 최소한 USceneComponent::Duplicate가 동작해야 합니다.
+- UStaticMeshComponent 전용 Duplicate는(있다면) 메시/머티리얼 같은 ‘프리미티브/메시’ 특화 데이터만 추가 복제하는 계층적 오버라이드여야 하고, ‘트랜스폼/계층’의 기본 복제는 USceneComponent에서 해결돼야 합니다.
+
+현재 코드 상태와 문제가 되는 이유
+1) 클래스 계층
+   UStaticMeshComponent → UMeshComponent → UPrimitiveComponent → USceneComponent → UActorComponent → UObject
+
+2) 가상 함수 분포(현 구현)
+   - UObject::Duplicate(가상) 존재
+   - UActorComponent::Duplicate() 오버라이드가 ‘nullptr 반환’으로 미구현 상태
+   - USceneComponent/ UPrimitiveComponent/ UMeshComponent/ UStaticMeshComponent에는 Duplicate 오버라이드가 없음
+
+3) 동적 디스패치 결과
+   - RootComponent가 UStaticMeshComponent라 해도, Duplicate 오버라이드가 정의된 가장 가까운 조상은 UActorComponent뿐입니다.
+   - 지금은 UActorComponent::Duplicate()가 호출되지만, 이 함수가 nullptr을 반환하므로 RootComponent 복제가 실패(null)합니다.
+   - 결과: AActor::DuplicateSubObjects에서 RootComponent가 nullptr로 바뀌고, 이후 루트 접근, 바운드 계산, 옥트리 삽입 등에서 크래시 유발.
+
+왜 ‘S t a t i c M e s h C o m p 의 Duplicate’가 아니라 ‘S c e n e C o m p 의 Duplicate’여야 하나
+- 역할 분리 원칙:
+  - Scene 계층(트랜스폼, 부모-자식 연결, 더티 플래그, 월드행렬)은 모든 렌더링 컴포넌트의 공통 기반입니다.
+  - Primitive/StaticMesh 계층은 가시성, 머티리얼/메시 리소스, 바운딩 박스 캐시 등 ‘콘텐츠’ 특화 데이터를 가집니다.
+  - 복제 시 ‘항상 필요한’ 것은 Scene 정보(트랜스폼/계층)입니다. 메시가 없는 라이트/텍스트/빈 씬컴포넌트도 존재할 수 있으니까요.
+  - 따라서 기본 Duplicate는 USceneComponent가 담당하고, UPrimitiveComponent/UMeshComponent/UStaticMeshComponent는 필요 시 Super::Duplicate() 호출 후 자신 고유의 필드를 추가 복제하는 구조가 바람직합니다.
+
+권장 수정 방향(요지)
+1) USceneComponent::Duplicate 구현
+   - 동일 클래스 인스턴스 생성(CreateDefaultObject 또는 NewObject 사용)
+   - Owner/Outer 세팅, 이름 유니크 처리
+   - RelativeLocation/Rotation/RotationQuat/Scale/UniformScale, Dirty 플래그 초기화, ParentAttachment는 복제 정책에 맞게 처리(대개 null 또는 동일 구조로 재배선)
+   - Children은 상위에서 재부착하도록 하고, 여기선 자기 자신 상태만 준비
+
+2) UPrimitiveComponent(또는 하위) Duplicate 오버라이드(선택/추가)
+   - Super(=USceneComponent)::Duplicate() 호출로 씬 정보 복제
+   - bVisible, Color 등 렌더링 공통 속성 복제
+   - OctreeIndex는 기본 -1로 초기화(PIE/새 월드 삽입 전 상태)
+
+3) UStaticMeshComponent Duplicate 오버라이드(선택/추가)
+   - Super(=UPrimitiveComponent)::Duplicate() 호출
+   - StaticMesh 포인터/머티리얼 리스트 복제(얕은 복사 또는 의도한 정책), WorldBound 캐시는 무효화
+
+4) AActor::DuplicateSubObjects 정비
+   - RootComponent = static_cast<USceneComponent*>(RootComponent->Duplicate());
+     (위 계층에서 Duplicate가 구현돼 있어야 정상 동작)
+   - OwnedComponents는 ‘새 컴포넌트’를 셋에 다시 넣어야 합니다.
+     현재 for (UActorComponent* Comp : OwnedComponents) { Comp = Comp->Duplicate(); }는 로컬 변수만 바뀌므로
+     → 새 셋을 구성해 교체하거나, 요소 지우고 새 복제본을 Insert하는 방식으로 갱신하세요.
+   - 각 새 컴포넌트에 대해 Owner/Outer/Name/Attach 관계를 적절히 복구
+
+요약 체크리스트
+- [필수] USceneComponent::Duplicate 구현(트랜스폼/더티/기본 상태 복제)
+- [권장] UPrimitiveComponent/UMeshComponent/UStaticMeshComponent에서 Super 호출 후 고유 필드 복제
+- [필수] AActor::DuplicateSubObjects에서 새 컴포넌트를 실제 셋에 반영하도록 로직 수정
+- [보너스] 옥트리 삽입 전 AABB 유효성/StaticMesh null 가드로 안전성 강화(별도 문서 readmebb.txt 참고)
+
