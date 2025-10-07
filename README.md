@@ -1,8 +1,3 @@
-\# Future Engine
+# Future Engine
 
-
-
-\## Game Tech Lab 2기
-
-
-
+## Game Tech Lab 2기
