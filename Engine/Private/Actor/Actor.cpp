@@ -115,15 +115,24 @@ void AActor::AddActorComponent(EComponentType InType, USceneComponent* InParentC
     default:
         break;
     }
-    if (NewComponent)
-    {
-        NewComponent->SetOwner(this);
-        Cast<USceneComponent>(NewComponent)->SetParentAttachment(InParentComponent);
+
+	//check(NewComponent);
+
+	if (NewComponent)
+	{
+		NewComponent->SetOwner(this);
+		Cast<USceneComponent>(NewComponent)->SetParentAttachment(InParentComponent);
 		if (!RootComponent)
 		{
 			SetRootComponent(NewComponent);
 		}
-    }
+		// 새로 추가된 컴포넌트를 옥트리에 등록합니다.                             
+		ULevel* MyLevel = GetLevel();
+		if (MyLevel && NewComponent->IsA(UPrimitiveComponent::StaticClass()))
+		{
+			MyLevel->AddToOctree(static_cast<UPrimitiveComponent*>(NewComponent));
+		}
+	}
 }
 
 const FVector& AActor::GetActorLocation() const
