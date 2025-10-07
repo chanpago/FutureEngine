@@ -357,21 +357,23 @@ void URenderer::RenderLevel()
 	// 옥트리를 이용한 프러스텀 컬링 부분
 	// =================================================================
 	TOctree<UPrimitiveComponent, PrimitiveComponentTrait>& StaticOctree = GWorld->GetCurrentLevel()->GetStaticOctree();
-	
-	PrimitiveComponentsToRender.clear();
-	
-	StaticOctree.OctreeFrustumCulling(Cam,PrimitiveComponentsToRender);
-	
-	PrimitiveComponentsToRender.Append(StaticOctree.GetElementsOutsideOctree());
-	 
-	int count = 0;
-	
-	UE_LOG("%d", PrimitiveComponentsToRender.Num());
 
-	TArray<UStaticMeshComponent*>& StaticMeshComponentsToRender = GWorld->GetCurrentLevel()->GetStaticMeshComponentsToRender();
+	// PrimitiveComponentsToRender TArray를 초기화
+	PrimitiveComponentsToRender.clear();
+
+	// 옥트리에서 컬링적용
+	StaticOctree.OctreeFrustumCulling(Cam,PrimitiveComponentsToRender);
+
+	// 옥트리 바깥에 있는 컴포넌트 추가
+	PrimitiveComponentsToRender.Append(StaticOctree.GetElementsOutsideOctree());
+
+
+	//UE_LOG("%d", PrimitiveComponentsToRender.Num());
+
+	//TArray<UStaticMeshComponent*>& StaticMeshComponentsToRender = GWorld->GetCurrentLevel()->GetStaticMeshComponentsToRender();
 
 	// 컬링된 결과(PrimitiveComponentsToRender)를 순회하여 렌더링
-	for (auto& Component : StaticMeshComponentsToRender)
+	for (auto& Component : PrimitiveComponentsToRender)
 	{
 
 		// UPrimitiveComponent를 UStaticMeshComponent로 캐스팅
@@ -406,7 +408,7 @@ void URenderer::RenderLevel()
 				UpdateConstant(FModelConstant{ Component->GetWorldTransformMatrix(), Component->GetInternalIndex() });
 
 				// 안전하게 캐스팅된 StaticMeshComponent 변수 사용
-				const UMaterial* Material = Component->GetMaterial(Index);
+				const UMaterial* Material = Cast<UStaticMeshComponent>(Component)->GetMaterial(Index);
 				if (Material)
 				{
 					if (!Material->GetKdTextureFilePath().empty())
