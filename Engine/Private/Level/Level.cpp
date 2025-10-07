@@ -96,11 +96,11 @@ void ULevel::UpdateComponentsToRender(AActor* Actor)
 			{
 				continue;
 			}
-          /*  if ( PrimitiveComponent->IsMoved())
+            if ( PrimitiveComponent->IsMoved())
             {
 				StaticOctree.UpdateElement(PrimitiveComponent);
 				PrimitiveComponent->NotMove();
-            }*/
+            }
 			if (Component->IsA(UTextRenderComponent::StaticClass()))
 			{
 				UTextRenderComponent* TextComponent = static_cast<UTextRenderComponent*>(Component);
@@ -367,7 +367,11 @@ void ULevel::RemoveFromRenderQueues(AActor* Owner)
 	//옥트리에서도 제거, 이거 안 하면 dangling 포인터 참조
 	for (UActorComponent* Component : Owner->GetOwnedComponents())
 	{
-		StaticOctree.RemoveElement(Cast<UPrimitiveComponent>(Component));
+		if (Component && Component->IsA(UPrimitiveComponent::StaticClass()))
+		{
+			StaticOctree.RemoveElement(static_cast<UPrimitiveComponent*>(Component));
+		}
+
 	}
 }
 

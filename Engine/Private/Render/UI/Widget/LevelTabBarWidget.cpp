@@ -10,6 +10,7 @@
 #include "Manager/Level/World.h"
 #include "Editor/EditorEngine.h"
 #include "Actor/StaticMeshActor.h"
+#include "Global/NameTable.h"
 
 IMPLEMENT_CLASS(ULevelTabBarWidget, UWidget)
 
@@ -421,9 +422,18 @@ void ULevelTabBarWidget::StartPIE()
 
 	PIEUIState = EPIEUIState::Playing;
 
+	FNameTable::GetInstance().PushNumberMapState();
+
 	//TODO: NO Current Level
 	UWorld* EditorWorld = GEditor->GetEditorWorldContext().World();
 	UWorld* PIEWorld = UWorld::DuplicateWorldForPIE(EditorWorld);
+
+	if (!PIEWorld)
+	{
+		PIEUIState = EPIEUIState::Stopped;
+		FNameTable::GetInstance().PopNumberMapState();
+		return;
+	}
 
 	GWorld = PIEWorld;
 	PIEWorld->InitializeActorsForPlay();
@@ -446,6 +456,7 @@ void ULevelTabBarWidget::EndPIE()
 	GWorld = GEditor->GetEditorWorldContext().World();
 	GEditor->RemoveWorldContext(EWorldType::PIE);
 
+	FNameTable::GetInstance().PopNumberMapState();
 
 	UUIManager::GetInstance().SetSelectedActor(nullptr);
 }

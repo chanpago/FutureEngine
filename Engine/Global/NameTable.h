@@ -11,6 +11,8 @@ public:
 	FString GetDisplayString(int32 Idx) const;
 
 	void Reset();
+	void PushNumberMapState();
+	void PopNumberMapState();
 	void ClearNumMap() { NextNumberMap.clear();  }
 private:
 	FString ToLower(const FString& Str) const;
@@ -33,4 +35,5 @@ private:
 
 	// 이름, 중복된 base string에 대한 넘버링
 	TMap<FString, int32> NextNumberMap;
+	TArray<TMap<FString, int32>> NumberMapStack;
 };

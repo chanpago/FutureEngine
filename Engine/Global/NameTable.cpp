@@ -119,3 +119,20 @@ void FNameTable::Reset()
 		}
 	}
 }
+
+
+void FNameTable::PushNumberMapState()
+{
+	NumberMapStack.Add(NextNumberMap);
+	ClearNumMap();
+}
+
+void FNameTable::PopNumberMapState()
+{
+	if (NumberMapStack.IsEmpty())
+	{
+		return;
+	}
+	NextNumberMap = NumberMapStack.back();
+	NumberMapStack.pop_back();
+}
