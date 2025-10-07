@@ -150,6 +150,9 @@ T* ULevel::SpawnActor(const FString& InName)
 	//Outer 설정 시 Outer의 메모리 카운트에 자신의 메모리 합산 작업 수행
 	NewActor->SetLevel(this);
 	LevelActors.push_back(NewActor);
+
+	AddActor(NewActor);
+
 	if (!InName.empty())
 	{
 		//NewActor->SetName(InName);

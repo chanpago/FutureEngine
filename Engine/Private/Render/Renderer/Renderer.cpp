@@ -356,17 +356,17 @@ void URenderer::RenderLevel()
 	// =================================================================
 	// 옥트리를 이용한 프러스텀 컬링 부분
 	// =================================================================
-	//TOctree<UPrimitiveComponent, PrimitiveComponentTrait>& StaticOctree = GWorld->GetCurrentLevel()->GetStaticOctree();
-	//
-	//PrimitiveComponentsToRender.clear();
-	//
-	//StaticOctree.OctreeFrustumCulling(Cam,PrimitiveComponentsToRender);
-	//
-	//PrimitiveComponentsToRender.Append(StaticOctree.GetElementsOutsideOctree());
-	// 
-	//int count = 0;
-	//
-	//UE_LOG("%d", PrimitiveComponentsToRender.Num());
+	TOctree<UPrimitiveComponent, PrimitiveComponentTrait>& StaticOctree = GWorld->GetCurrentLevel()->GetStaticOctree();
+	
+	PrimitiveComponentsToRender.clear();
+	
+	StaticOctree.OctreeFrustumCulling(Cam,PrimitiveComponentsToRender);
+	
+	PrimitiveComponentsToRender.Append(StaticOctree.GetElementsOutsideOctree());
+	 
+	int count = 0;
+	
+	UE_LOG("%d", PrimitiveComponentsToRender.Num());
 
 	TArray<UStaticMeshComponent*>& StaticMeshComponentsToRender = GWorld->GetCurrentLevel()->GetStaticMeshComponentsToRender();
 

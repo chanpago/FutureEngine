@@ -96,11 +96,11 @@ void ULevel::UpdateComponentsToRender(AActor* Actor)
 			{
 				continue;
 			}
-          /*  if ( PrimitiveComponent->IsMoved())
+            if ( PrimitiveComponent->IsMoved())
             {
 				StaticOctree.UpdateElement(PrimitiveComponent);
 				PrimitiveComponent->NotMove();
-            }*/
+            }
 			if (Component->IsA(UTextRenderComponent::StaticClass()))
 			{
 				UTextRenderComponent* TextComponent = static_cast<UTextRenderComponent*>(Component);
@@ -139,17 +139,6 @@ void ULevel::AddActor(AActor* InActor)
     if (!InActor)
     {
         return;
-    }
-    // Rebase ownership to this level
-    InActor->SetOuter(this);
-    InActor->SetLevel(this);
-    LevelActors.push_back(InActor);
-
-    // Register primitives in octree (root and child primitives)
-    USceneComponent* Root = InActor->GetRootComponent();
-    if (Root && Root->IsA(UPrimitiveComponent::StaticClass()))
-    {
-        AddToOctree(static_cast<UPrimitiveComponent*>(Root));
     }
     for (UActorComponent* Comp : InActor->GetOwnedComponents())
     {
@@ -365,10 +354,10 @@ void ULevel::RemoveFromRenderQueues(AActor* Owner)
 
 
 	//옥트리에서도 제거, 이거 안 하면 dangling 포인터 참조
-	/*for (UActorComponent* Component : Owner->GetOwnedComponents())
+	for (UActorComponent* Component : Owner->GetOwnedComponents())
 	{
 		StaticOctree.RemoveElement(Cast<UPrimitiveComponent>(Component));
-	}*/
+	}
 }
 
 
