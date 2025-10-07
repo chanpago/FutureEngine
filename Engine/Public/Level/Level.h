@@ -75,6 +75,12 @@ public:
 	// 선택된 액터 설정
 	// Actor 삭제
 	bool DestroyActor(AActor* InActor);
+
+	// 옥트리에서 컴포넌트 삭제
+	void RemoveFromOctree(USceneComponent* Component);
+
+
+
 	// 지연 삭제를 위한 마킹
 	void MarkActorForDeletion(AActor* InActor);
 

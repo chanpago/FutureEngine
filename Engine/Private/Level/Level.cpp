@@ -225,6 +225,14 @@ bool ULevel::DestroyActor(AActor* InActor)
 	return true;
 }
 
+void ULevel::RemoveFromOctree(USceneComponent* Component)
+{
+	if (Component)
+	{
+		StaticOctree.RemoveElement(Cast<UPrimitiveComponent>(Component));
+	}
+}
+
 /**
  * @brief Delete In Next Tick
  */

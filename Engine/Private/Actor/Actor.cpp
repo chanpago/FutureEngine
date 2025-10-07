@@ -6,6 +6,7 @@
 #include <Actor/StaticMeshActor.h>
 #include "Components/TextRenderComponent.h"
 #include "Components/BillboardComponent.h" 
+#include "Public/Manager/Level/World.h"
 
 IMPLEMENT_CLASS(AActor, UObject)
 
@@ -264,6 +265,9 @@ void AActor::DestroyComponent(USceneComponent* Component)
 			Siblings.erase(Siblings.begin() + Parent->GetChildComponents().Find(Component));
 		}
 	}
+
+	GWorld->GetCurrentLevel()->RemoveFromOctree(Component);
+
 	delete Component;
 }
 
