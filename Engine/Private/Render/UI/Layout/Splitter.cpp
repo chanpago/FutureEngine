@@ -106,7 +106,7 @@ bool SSplitter::OnMouseDown(FPoint Coord, int Button)
 		}
 		else // Horizontal
 		{
-			if (auto* Root = Cast(UViewportManager::GetInstance().GetRoot()))
+			if (auto* Root = Cast(UViewportManager::GetInstance().GetQuadRoot()))
 			{
 				if (Root->Orientation == EOrientation::Vertical && Root->IsHandleHover(Coord))
 				{
@@ -122,7 +122,7 @@ bool SSplitter::OnMouseDown(FPoint Coord, int Button)
 
 bool SSplitter::OnMouseMove(FPoint Coord)
 {
-	UE_LOG("0");
+	//UE_LOG("0");
 	if (!bDragging)
 	{
 		return IsHandleHover(Coord);
@@ -131,7 +131,7 @@ bool SSplitter::OnMouseMove(FPoint Coord)
 	// Cross-drag: update both axes
 	if (bCrossDragging)
 	{
-		UE_LOG("1");
+		//UE_LOG("1");
 		if (auto* Root = Cast(UViewportManager::GetInstance().GetQuadRoot()))
 		{
 			// Vertical ratio from root rect
@@ -220,7 +220,7 @@ void SSplitter::OnPaint()
 		// 1) If sibling horizontal handle is hovered, mirror-hover this one too
 		if (!hovered)
 		{
-			if (auto* Root = Cast(UViewportManager::GetInstance().GetRoot()))
+			if (auto* Root = Cast(UViewportManager::GetInstance().GetQuadRoot()))
 			{
 				if (Root->Orientation == EOrientation::Vertical)
 				{
@@ -237,7 +237,7 @@ void SSplitter::OnPaint()
 		// 2) If vertical handle (root) is hovered and Y matches our handle band, also hover
 		if (!hovered)
 		{
-			if (auto* Root = Cast(UViewportManager::GetInstance().GetRoot()))
+			if (auto* Root = Cast(UViewportManager::GetInstance().GetQuadRoot()))
 			{
 				if (Root->Orientation == EOrientation::Vertical && Root->IsHandleHover(P))
 				{

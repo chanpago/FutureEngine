@@ -67,6 +67,10 @@ void UViewportManager::Initialize(FAppWindow* InWindow)
 	LeftSplitterH = new SSplitterH();
 	RightSplitterH = new SSplitterH();
 
+	// 두 수평 스플리터가 동일한 비율 값을 공유하도록 설정합니다.
+	LeftSplitterH->SetSharedRatio(&SplitterValueH);
+	RightSplitterH->SetSharedRatio(&SplitterValueH);
+
 	// 부모 스플리터의 자식 스플리터를 셋합니다.
 	SplitterV->SetChildren(LeftSplitterH, RightSplitterH);
 
