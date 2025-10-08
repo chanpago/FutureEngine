@@ -111,7 +111,7 @@ return Instance; \
  * @param Line The line number where the failure occurred.
  * @param Message Optional message providing additional context.
  */
-inline void HandleAssertionFailure(const char* Expression, const char* File, uint32 Line, const char* Message)
+inline void HandleAssertionFailure(const char* Expression, const char* File, uint32 Line, const char* Message = "")
 {
 	std::ostringstream Formatter;
 	Formatter << "Assertion Failed!"			<< "\n\n"
