@@ -51,7 +51,7 @@ void UViewportControlWidget::RenderWidget()
 	}
 	else
 	{
-		for (int32 i = -0;i < 4;++i)
+		for (int32 i = 0;i < 4;++i)
 		{
 			RenderViewportToolbar(i);
 		}
