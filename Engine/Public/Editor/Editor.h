@@ -57,6 +57,11 @@ public:
 	UGizmo* GetGizmo() { return &Gizmo; }
 	const UGizmo* GetGizmo() const { return &Gizmo; }
 
+	/**
+	 * @brief 기즈모 접근자
+	 * 각 뷰포트에서 기즈모 렌더링을 위해 사용
+	 */
+
 private:
 
 	void ProcessMouseInput(ULevel* InLevel);

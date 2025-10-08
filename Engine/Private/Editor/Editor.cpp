@@ -82,6 +82,7 @@ void UEditor::Update()
 	// 매 업데이트마다 카메라를 업데이트합니다
 
 	int32 ActiveIndex = UViewportManager::GetInstance().GetActiveIndex();
+	//UE_LOG("%d", ActiveIndex);
 	if (ActiveViewportIndex != ActiveIndex)
 	{
 		ActiveViewportIndex = ActiveIndex;
@@ -315,140 +316,30 @@ void UEditor::ProcessMouseInput(ULevel* InLevel)
 		if (!bIsQuad)
 		{
 			FVector MousePositionNdc = InputManager.GetMouseNDCPosition();
-			// 싱글뷰는 기존대로 전체 화면 NDC를 사용하지만, 멀티뷰 대비 안전을 위해 종횡비와 행렬 업데이트
-			if (ViewportManager.GetViewportLayout() == EViewportLayout::Quad)
-			{
-				DXGI_SWAP_CHAIN_DESC scd = {};
-				URenderer::GetInstance().GetSwapChain()->GetDesc(&scd);
-				float vpAspect = (scd.BufferDesc.Height > 0) ? (float)scd.BufferDesc.Width / (float)scd.BufferDesc.Height : 1.0f;
-				PickCam->SetAspect(vpAspect);
-				if (PickCam->GetCameraType() == ECameraType::ECT_Perspective) PickCam->UpdateMatrixByPers(); else PickCam->UpdateMatrixByOrth();
-			}
 			WorldRay = Camera->ConvertToWorldRay(MousePositionNdc.X, MousePositionNdc.Y);
 		}
 		else
 		{
-			//FVector pos;
-			//// Determine hovered viewport and build ray using its camera
-			//const FVector MousePosPx = InputManager.GetMousePosition();
-			//HoverIndex = Renderer.GetHoveredViewportIndex(MousePosPx.X, MousePosPx.Y, HoverRect);
-			//if (HoverIndex < 0)
-			//{
-			//	HoverIndex = 0;
-			//	DXGI_SWAP_CHAIN_DESC scd = {};
-			//	Renderer.GetSwapChain()->GetDesc(&scd);
-			//	HoverRect = { 0, 0, (LONG)scd.BufferDesc.Width, (LONG)scd.BufferDesc.Height };
-			//}
-			//// Convert pixel to local NDC of that viewport rect
-			//float LocalNdcX = ((MousePosPx.X - HoverRect.X) / HoverRect.W) * 2.0f - 1.0f;
-			//float LocalNdcY = 1.0f - ((MousePosPx.Y - HoverRect.Y) / HoverRect.H) * 2.0f;
-			//
-			//// 항상 뷰포트 전용 카메라를 사용 (TL도 ViewCameras[0])
-			//PickCam = Renderer.GetViewCameraAt(HoverIndex);
-			//if (!PickCam || Camera.IsDragging())
-			//{
-			//	PickCam = Renderer.GetViewCameraAt(0);
-			//}
-			//// 멀티뷰에서는 선택된 뷰포트 타입에 맞춰 카메라 파라미터를 맞춘 뒤 종횡비 반영
-			//URenderer::EViewportType VType = URenderer::EViewportType::Perspective;
-			//switch (HoverIndex)
-			//{
-			//case 0: VType = URenderer::EViewportType::Perspective; break; // TL
-			//case 1: VType = URenderer::EViewportType::Right; break;       // BL
-			//case 2: VType = URenderer::EViewportType::Top; break;         // TR
-			//case 3: VType = URenderer::EViewportType::Front; break;       // BR
-			//default: break;
-			//}
-			//switch (VType)
-			//{
-			//case URenderer::EViewportType::Perspective:
-			//	PickCam->SetCameraType(ECameraType::ECT_Perspective);
-			//	PickCam->SetLocation(Camera.GetLocation());
-			//	PickCam->SetRotation(Camera.GetRotation());
-			//	break;
-			//default:
-			//	for (int Index = 1; Index < 4; Index++)
-			//	{
-			//		UCamera* PickCam1 = Renderer.GetViewCameraAt(Index);
-			//		if (Index == 2)
-			//		{
-			//			PickCam1->SetCameraType(ECameraType::ECT_Orthographic);
-			//			PickCam1->SetNearZ(0.1f); PickCam1->SetFarZ(1000.f);
-			//			PickCam1->SetLocation(Pos + FVector(0, 0, CameraDistance));
-			//			PickCam1->SetRotation(FVector(90.0f, 0.0f, 0.0f));
-			//		}
-			//		else if (Index == 1)	//Right
-			//		{
-			//			PickCam1->SetCameraType(ECameraType::ECT_Orthographic);
-			//			PickCam1->SetNearZ(0.1f); PickCam1->SetFarZ(1000.f);
-			//			PickCam1->SetLocation(Pos + FVector(0, CameraDistance, 0));
-			//			PickCam1->SetRotation(FVector(0.0f, -90.0f, 0.0f));
-			//		}
-			//		else
-			//		{
-			//			PickCam1->SetCameraType(ECameraType::ECT_Orthographic);
-			//			PickCam1->SetNearZ(0.1f); PickCam1->SetFarZ(1000.f);
-			//			PickCam1->SetLocation(Pos + FVector(-CameraDistance, 0, 0));
-			//			PickCam1->SetRotation(FVector(0.0f, 0.0f, 0.0f));
-			//		}
-			//
-			//	}
-			//}
-			//// Hovered viewport interactive controls (orthographic): pan with WASD/Arrows, zoom with wheel
-			//if (PickCam->GetCameraType() == ECameraType::ECT_Orthographic)
-			//{
-			//	const UInputManager& InputForView = UInputManager::GetInstance();
-			//	bool rmbView = InputForView.IsKeyDown(EKeyInput::MouseRight);
-			//	// Zoom (wheel always active)
-			//	float wheel = InputForView.GetMouseWheelDelta();
-			//	if (wheel != 0.0f)
-			//	{
-			//		float width = Renderer.GetOrthoWorldWidthConst();
-			//
-			//		float scale = (wheel > 0.0f) ? 0.9f : 1.1f;
-			//		for (int i = 0; i < (int)std::abs(wheel); ++i) width *= scale;
-			//		width = std::max(1.0f, std::min(5000.0f, width));
-			//		//for (int Index = 0; Index < 4;Index++)
-			//			Renderer.SetOrthoWorldWidthConst(width);
-			//		CameraDistance *= scale;
-			//	}
-			//	// Pan (only when RMB is held over this viewport)
-			//	if (rmbView)
-			//	{
-			//		float PickCameraSpeed = Camera.GetMoveSpeed();
-			//		float base = std::max(0.001f, PickCam->GetOrthoWorldWidth() * 0.06f) * PickCameraSpeed * DT;
-			//		bool keyW = InputForView.IsKeyDown(EKeyInput::W) || InputForView.IsKeyDown(EKeyInput::Up);
-			//		bool keyS = InputForView.IsKeyDown(EKeyInput::S) || InputForView.IsKeyDown(EKeyInput::Down);
-			//		bool keyA = InputForView.IsKeyDown(EKeyInput::A) || InputForView.IsKeyDown(EKeyInput::Left);
-			//		bool keyD = InputForView.IsKeyDown(EKeyInput::D) || InputForView.IsKeyDown(EKeyInput::Right);
-			//		switch (VType)
-			//		{
-			//		case URenderer::EViewportType::Top:
-			//			if (keyW) Pos.X += base; if (keyS) Pos.X -= base; if (keyA) Pos.Y -= base; if (keyD) Pos.Y += base;
-			//			break;
-			//		case URenderer::EViewportType::Right:
-			//			if (keyW) Pos.Z += base; if (keyS) Pos.Z -= base; if (keyA) Pos.X -= base; if (keyD) Pos.X += base;
-			//			break;
-			//		case URenderer::EViewportType::Front:
-			//			if (keyW) Pos.Z += base; if (keyS) Pos.Z -= base; if (keyA) Pos.Y -= base; if (keyD) Pos.Y += base;
-			//			break;
-			//		default: break;
-			//		}
-			//		//PickCam->SetLocation(pos);
-			//	}
-			//}
-			//
-			//// 선택된 뷰포트 직사각형 기준의 종횡비를 카메라에 적용해 정확한 레이 계산
-			//float vpAspect = (HoverRect.H > 0.0f) ? (HoverRect.W / HoverRect.H) : 1.0f;
-			//PickCam->SetAspect(vpAspect);
-			//if (PickCam->GetCameraType() == ECameraType::ECT_Perspective) PickCam->UpdateMatrixByPers(); else PickCam->UpdateMatrixByOrth();
-			//// 월드 레이
-			//WorldRay = PickCam->ConvertToWorldRay(LocalNdcX, LocalNdcY);
-			//{
-			//	Gizmo.UpdateCollisionScaleForCamera(PickCam->GetLocation(), SelectedComponent);
-			//}
-			//// 월드 레이
-			//WorldRay = PickCam->ConvertToWorldRay(LocalNdcX, LocalNdcY);
+			// 다중 뷰포트 로직:
+			// 1. 현재 마우스 아래에 있는 뷰포트의 인덱스를 가져옵니다.
+			HoverIndex = ViewportManager.GetViewportIndexUnderMouse();
+			if (HoverIndex < 0) HoverIndex = 0; // 실패 시 기본 뷰포트로 대체
+
+			// 2. 해당 뷰포트의 카메라를 가져옵니다.
+			PickCam = ViewportManager.GetClients()[HoverIndex]->GetCamera();
+			if (!PickCam) PickCam = Camera; // 만약 카메라가 없다면 메인 카메라로 대체
+
+			// 3. InputManager로부터 현재 뷰포트 기준의 올바른 NDC 좌표를 가져옵니다.
+			FVector MousePositionNdc = InputManager.GetMouseNDCPosition();
+
+			// 4. 올바른 카메라와 NDC를 사용하여 월드 광선을 생성합니다.
+			WorldRay = PickCam->ConvertToWorldRay(MousePositionNdc.X, MousePositionNdc.Y);
+			
+			// 5. 기즈모의 시각적 크기를 현재 뷰포트 카메라와의 거리에 맞춰 업데이트합니다.
+			if (SelectedComponent)
+			{
+				Gizmo.UpdateCollisionScaleForCamera(PickCam->GetLocation(), SelectedComponent);
+			}
 		}
 	}
 

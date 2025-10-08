@@ -164,8 +164,8 @@ void UUIManager::Render()
 		}
 	}
 
-	// Renderer overlay (splitter lines) inside the ImGui frame so they render reliably
-	URenderer::GetInstance().DrawSplitterOverlay();
+
+	UViewportManager::GetInstance().RenderOverlay();
 
 	// ImGui 프레임 종료
 	ImGuiHelper->EndFrame();

@@ -10,6 +10,7 @@
 #include "Render/UI/Layout/SplitterH.h"
 #include "public/Render/UI/Window/LevelTabBarWindow.h"
 #include "public/Render/UI/Window/MainMenuWindow.h"
+#include "Public/Manager/Input/InputManager.h"
 
 IMPLEMENT_CLASS(UViewportManager, UObject)
 
@@ -54,10 +55,6 @@ void UViewportManager::Initialize(FAppWindow* InWindow)
 	InitializeViewportAndClient();
 
 
-	//IniSaveSharedV = UConfigManager::GetInstance().GetSplitV();
-	//IniSaveSharedH = UConfigManager::GetInstance().GetSplitH();
-
-
 	// 부모 스플리터
 	SplitterV = new SSplitterV();
 	SplitterV->Ratio = IniSaveSharedV;
@@ -65,6 +62,10 @@ void UViewportManager::Initialize(FAppWindow* InWindow)
 	// 자식 스플리터
 	LeftSplitterH = new SSplitterH();
 	RightSplitterH = new SSplitterH();
+
+	// 두 수평 스플리터가 동일한 비율 값을 공유하도록 설정합니다.
+	LeftSplitterH->SetSharedRatio(&SplitterValueH);
+	RightSplitterH->SetSharedRatio(&SplitterValueH);
 
 	// 부모 스플리터의 자식 스플리터를 셋합니다.
 	SplitterV->SetChildren(LeftSplitterH, RightSplitterH);
@@ -113,53 +114,67 @@ void UViewportManager::Update()
 	// 91px height
 	const int MenuAndLevelHeight = UMainMenuWindow::GetInstance().GetMenuBarHeight() + ULevelTabBarWindow::GetInstance().GetLevelBarHeight();
 
-
-	// ViewportWidth는 실제로 렌더링이 될 영역의 뷰포트 입니다
+	// ActiveViewportRect는 실제로 렌더링이 될 영역의 뷰포트 입니다
 	const int32 RightPanelWidth = static_cast<int32>(UUIManager::GetInstance().GetRightPanelWidth());
 	const int32 ViewportWidth = Width - RightPanelWidth;
-
-	if (Width > 0 && Height > 0)
-	{
-		Root->OnResize(FRect{ 0, MenuAndLevelHeight, max(0, ViewportWidth), max(0, Height - MenuAndLevelHeight) });
-	}
-
 	ActiveViewportRect = FRect{ 0, MenuAndLevelHeight, max(0, ViewportWidth), max(0, Height - MenuAndLevelHeight) };
 
 
-
-
-	//FRect PreviousContent = Root->GetRect();
-
-	// 상단 메뉴 (메뉴, 레벨 바)
-	//float MenuAndLevelBarHeight = ULevelTabBarWindow::GetInstance().GetLevelBarHeight();
-
-
-	// 컨텐츠 영역: Y만 아래로 내리고, H는 줄이기
-	//FRect Content = {0, MenuAndLevelBarHeight, }
-
-	// 레벨정보 저장, 엑터생성, pie 메뉴
-
-
-
-	// 루트 윈도우 사이즈 재조정
-	// 여기 안에서 원근-직교(상하좌우앞뒤), 라이팅, 뷰포트 모드변경 등등 설정
-	//Root->OnResize(content);
-	
-
-
-
-	// 4) 드로우(3D) — 실제 렌더러 루프에서 Viewport 적용 후 호출해도 됨
-	//    여기서는 뷰/클라 페어 순회만 보여줌. (RS 바인딩은 네 렌더러 Update에서 수행 중)
-	const int32 N = static_cast<int32>(Clients.size());
-	for (int32 i = 0; i < 1; ++i)
+	if (ViewportLayout == EViewportLayout::Quad)
 	{
-		Clients[i]->Draw(Viewports[i]);
+		if (QuadRoot)
+		{
+			QuadRoot->OnResize(ActiveViewportRect);
+		}
+		// SWindow 레이아웃의 최종 Rect를 FViewport에 동기화합니다.
+		// 이 작업을 통해 3D 렌더링이 올바른 화면 영역에 그려집니다.
+		for (int32 i = 0; i < 4; ++i)
+		{
+			if (Leaves[i] && Viewports[i] && Clients[i])
+			{
+				Viewports[i]->SetRect(Leaves[i]->GetRect());
+
+				// 각 카메라 종횡비 조정
+				const float Aspect = Viewports[i]->GetAspect();
+				Clients[i]->GetCamera()->SetAspect(Aspect);
+			}
+		}
+
+
+		int32 ViewportIndexUnderMouse = GetViewportIndexUnderMouse();
+		if (ViewportIndexUnderMouse != -1 && ActiveIndex!= ViewportIndexUnderMouse && !UInputManager::GetInstance().IsKeyDown(EKeyInput::MouseRight))
+		{
+			ActiveIndex = ViewportIndexUnderMouse;
+		}
 	}
+	else 
+	{
+		SetRoot(Leaves[ActiveIndex]);
+
+		if (Root)
+		{
+			Root->OnResize(ActiveViewportRect);
+		}
+
+		Viewports[ActiveIndex]->SetRect(Leaves[ActiveIndex]->GetRect());
+	}
+
+	// 스플리터 드래그 처리 함수
+	TickInput();
+
+
+	// 애니메이션 처리함수
+	UpdateViewportAnimation();
 }
 
 
 void UViewportManager::RenderOverlay()
 {
+	if (!(ViewportLayout == EViewportLayout::Quad || ViewportAnimation.bIsAnimating))
+		return;
+
+	if (QuadRoot)
+		QuadRoot->OnPaint();
 }
 
 void UViewportManager::Release()
@@ -168,6 +183,60 @@ void UViewportManager::Release()
 
 void UViewportManager::TickInput()
 {
+	if (!(ViewportLayout == EViewportLayout::Quad || ViewportAnimation.bIsAnimating))
+	{
+		return;
+	}
+	if (!QuadRoot)
+	{
+		return;
+	}
+
+	auto& InputManager = UInputManager::GetInstance();
+	const FVector& MousePosition = InputManager.GetMousePosition();
+	FPoint Point{ static_cast<LONG>(MousePosition.X), static_cast<LONG>(MousePosition.Y) };
+
+	SWindow* Target = nullptr;
+
+	if (Capture != nullptr)
+	{
+		// 드래그 캡처 중이면, 히트 테스트 없이 캡처된 위젯으로 고정
+		Target = static_cast<SWindow*>(Capture);
+	}
+	else
+	{
+		// 캡처가 아니면 화면 좌표로 히트 테스트
+		Target = (QuadRoot != nullptr) ? QuadRoot->HitTest(Point) : nullptr;
+	}
+
+	if (InputManager.IsKeyPressed(EKeyInput::MouseLeft) || (!Capture && InputManager.IsKeyDown(EKeyInput::MouseLeft)))
+	{
+		if (Target && Target->OnMouseDown(Point, 0))
+		{
+			Capture = Target;
+		}
+	}
+
+	const FVector& Delta = InputManager.GetMouseDelta();
+	if ((Delta.X != 0.0f || Delta.Y != 0.0f) && Capture)
+	{
+		Capture->OnMouseMove(Point);
+	}
+
+	if (InputManager.IsKeyReleased(EKeyInput::MouseLeft))
+	{
+		if (Capture)
+		{
+			Capture->OnMouseUp(Point, 0);
+			Capture = nullptr;
+		}
+	}
+
+	if (!InputManager.IsKeyDown(EKeyInput::MouseLeft) && Capture)
+	{
+		Capture->OnMouseUp(Point, 0);
+		Capture = nullptr;
+	}
 }
 
 void UViewportManager::BuildSingleLayout(int32 PromoteIdx)
@@ -207,7 +276,27 @@ void UViewportManager::GetLeafRects(TArray<FRect>& OutRects) const
 
 int32 UViewportManager::GetViewportIndexUnderMouse() const
 {
-    return int32();
+	const auto& InputManager = UInputManager::GetInstance();
+
+	const FVector& MousePosition = InputManager.GetMousePosition();
+	const LONG MousePositionX = static_cast<LONG>(MousePosition.X);
+	const LONG MousePositionY = static_cast<LONG>(MousePosition.Y);
+
+	for (int32 i = 0; i < static_cast<int8>(Viewports.size()); ++i)
+	{
+		const FRect& Rect = Viewports[i]->GetRect();
+		const int32 ToolbarHeight = Viewports[i]->GetToolbarHeight();
+
+		const LONG RenderAreaTop = Rect.Y + ToolbarHeight;
+		const LONG RenderAreaBottom = Rect.Y + Rect.H;
+
+		if (MousePositionX >= Rect.X && MousePositionX < Rect.X + Rect.W &&
+			MousePositionY >= RenderAreaTop && MousePositionY < RenderAreaBottom)
+		{
+			return i;
+		}
+	}
+	return -1;
 }
 
 bool UViewportManager::ComputeLocalNDCForViewport(int32 Index, float& OutNdcX, float& OutNdcY) const
@@ -217,14 +306,171 @@ bool UViewportManager::ComputeLocalNDCForViewport(int32 Index, float& OutNdcX, f
 
 void UViewportManager::PersistSplitterRatios()
 {
+	// 세로(Vertical) 비율은 QuadRoot(= SplitterV)에서 읽는다
+	if (auto* V = Cast(QuadRoot))
+		IniSaveSharedV = V->Ratio;
+
+	// 가로(Horizontal)는 공유값(SplitterValueH)을 그대로 저장
+	IniSaveSharedH = SplitterValueH;
+
+	ViewLayoutChangeSplitterV = IniSaveSharedV;
+	ViewLayoutChangeSplitterH = IniSaveSharedH;
+	
+}
+
+void UViewportManager::QuadToSingleAnimation()
+{
+	if (ActiveIndex == 0)
+	{
+
+	}
+	if (ActiveIndex == 1)
+	{
+
+	}
+	if (ActiveIndex == 2)
+	{
+
+	}
+	if (ActiveIndex == 3)
+	{
+
+	}
+}
+
+void UViewportManager::SingleToQuadAnimation()
+{
+	if (ActiveIndex == 0)
+	{
+
+	}
+	if (ActiveIndex == 1)
+	{
+
+	}
+	if (ActiveIndex == 2)
+	{
+
+	}
+	if (ActiveIndex == 3)
+	{
+
+	}
 }
 
 void UViewportManager::StartLayoutAnimation(bool bSingleToQuad, int32 ViewportIndex)
 {
+	ViewportAnimation.bSingleToQuad = bSingleToQuad;
+	ViewportAnimation.bIsAnimating = true;
+	ViewportAnimation.AnimationTime = 0.0f;
+	ViewportAnimation.PromotedViewportIndex =
+		(ViewportIndex >= 0) ? ViewportIndex : ActiveIndex;
+
+	// 공통: 최소 사이즈 0으로 (끝까지 밀 수 있게)
+	if (auto* RootSplit = Cast(QuadRoot))
+	{
+		ViewportAnimation.SavedMinChildSizeV = RootSplit->MinChildSize;
+		RootSplit->MinChildSize = 0;
+
+		if (auto* HLeft = Cast(RootSplit->SideLT)) {
+			ViewportAnimation.SavedMinChildSizeH = HLeft->MinChildSize;
+			HLeft->MinChildSize = 0;
+		}
+		if (auto* HRight = Cast(RootSplit->SideRB)) {
+			if (auto* HR = Cast(HRight)) HR->MinChildSize = 0;
+		}
+	}
+
+	if (!bSingleToQuad)
+	{
+		// ===== Quad -> Single (기존과 동일) =====
+		ViewportAnimation.StartVRatio = SplitterValueV;
+		ViewportAnimation.StartHRatio = SplitterValueH;
+
+		switch (ViewportAnimation.PromotedViewportIndex)
+		{
+		case 0: ViewportAnimation.TargetVRatio = 1.0f; ViewportAnimation.TargetHRatio = 1.0f; break; // LT
+		case 1: ViewportAnimation.TargetVRatio = 1.0f; ViewportAnimation.TargetHRatio = 0.0f; break; // LB
+		case 2: ViewportAnimation.TargetVRatio = 0.0f; ViewportAnimation.TargetHRatio = 1.0f; break; // RT
+		case 3: ViewportAnimation.TargetVRatio = 0.0f; ViewportAnimation.TargetHRatio = 0.0f; break; // RB
+		default: ViewportAnimation.TargetVRatio = SplitterValueV; ViewportAnimation.TargetHRatio = SplitterValueH; break;
+		}
+
+		ViewportLayout = EViewportLayout::Quad;
+		ViewportAnimation.BackupRoot = Root;
+		Root = QuadRoot; // 애니 동안 쿼드
+	}
+	else
+	{
+		// ===== Single -> Quad =====
+		ActiveIndex = ViewportAnimation.PromotedViewportIndex;
+
+		// 시작값: 현재 싱글이 차지하는 방향으로 핸들을 끝까지 보낸 비율
+		switch (ActiveIndex)
+		{
+		case 0: ViewportAnimation.StartVRatio = 1.0f; ViewportAnimation.StartHRatio = 1.0f; break; // LT
+		case 1: ViewportAnimation.StartVRatio = 1.0f; ViewportAnimation.StartHRatio = 0.0f; break; // LB
+		case 2: ViewportAnimation.StartVRatio = 0.0f; ViewportAnimation.StartHRatio = 1.0f; break; // RT
+		case 3: ViewportAnimation.StartVRatio = 0.0f; ViewportAnimation.StartHRatio = 0.0f; break; // RB
+		default: ViewportAnimation.StartVRatio = 0.5f; ViewportAnimation.StartHRatio = 0.5f; break;
+		}
+
+		// 목표값: 이전에 저장해 둔 쿼드 배치 비율
+		ViewportAnimation.TargetVRatio = std::clamp(ViewLayoutChangeSplitterV, 0.0f, 1.0f);
+		ViewportAnimation.TargetHRatio = std::clamp(ViewLayoutChangeSplitterH, 0.0f, 1.0f);
+		// fallback
+		if (!(ViewportAnimation.TargetVRatio >= 0.0f && ViewportAnimation.TargetVRatio <= 1.0f))
+			ViewportAnimation.TargetVRatio = IniSaveSharedV;
+		if (!(ViewportAnimation.TargetHRatio >= 0.0f && ViewportAnimation.TargetHRatio <= 1.0f))
+			ViewportAnimation.TargetHRatio = IniSaveSharedH;
+
+		// 현재 내부 상태도 시작값으로 셋
+		SplitterValueV = ViewportAnimation.StartVRatio;
+		SplitterValueH = ViewportAnimation.StartHRatio;
+
+		// 애니 시작 시점에 쿼드 레이아웃으로 전환(그리기/입력 활성)
+		ViewportLayout = EViewportLayout::Quad;
+
+		// 루트 전환 (애니 동안 쿼드 트리를 사용)
+		ViewportAnimation.BackupRoot = Root;
+		Root = QuadRoot;
+
+		// 실제 스플리터에 시작값을 반영하고 배치
+		if (auto* RootSplit = Cast(QuadRoot))
+		{
+			RootSplit->SetEffectiveRatio(SplitterValueV);
+			if (auto* HLeft = Cast(RootSplit->SideLT))  HLeft->SetEffectiveRatio(SplitterValueH);
+			if (auto* HRight = Cast(RootSplit->SideRB)) HRight->SetEffectiveRatio(SplitterValueH);
+			RootSplit->OnResize(ActiveViewportRect);
+		}
+		SyncRectsToViewports();
+	}
 }
 
 void UViewportManager::SyncRectsToViewports() const
 {
+	// 쿼드일 때 4개 모두, 싱글일 때 Active만
+	if (ViewportLayout == EViewportLayout::Quad)
+	{
+		for (int i = 0; i < 4; ++i)
+		{
+			if (Leaves[i] && Viewports[i] && Clients[i])
+			{
+				Viewports[i]->SetRect(Leaves[i]->GetRect());
+				const float Aspect = Viewports[i]->GetAspect();
+				Clients[i]->GetCamera()->SetAspect(Aspect);
+			}
+		}
+	}
+	else
+	{
+		if (Leaves[ActiveIndex] && Viewports[ActiveIndex] && Clients[ActiveIndex])
+		{
+			Viewports[ActiveIndex]->SetRect(Leaves[ActiveIndex]->GetRect());
+			const float Aspect = Viewports[ActiveIndex]->GetAspect();
+			Clients[ActiveIndex]->GetCamera()->SetAspect(Aspect);
+		}
+	}
 }
 
 void UViewportManager::SyncAnimationRectsToViewports() const
@@ -315,11 +561,41 @@ void UViewportManager::StartViewportAnimation(bool bSingleToQuad, int32 PromoteI
 
 void UViewportManager::UpdateViewportAnimation()
 {
+	if (!ViewportAnimation.bIsAnimating) return;
+
+	ViewportAnimation.AnimationTime += DT;
+
+	float t = ViewportAnimation.AnimationTime / ViewportAnimation.AnimationDuration;
+	float k = EaseInOutCubic(std::clamp(t, 0.0f, 1.0f));
+
+	// 보간
+	SplitterValueV = std::lerp(ViewportAnimation.StartVRatio, ViewportAnimation.TargetVRatio, k);
+	SplitterValueH = std::lerp(ViewportAnimation.StartHRatio, ViewportAnimation.TargetHRatio, k);
+
+	if (auto* RootSplit = Cast(QuadRoot))
+	{
+		RootSplit->SetEffectiveRatio(SplitterValueV);
+		if (auto* HLeft = Cast(RootSplit->SideLT))  HLeft->SetEffectiveRatio(SplitterValueH);
+		if (auto* HRight = Cast(RootSplit->SideRB)) HRight->SetEffectiveRatio(SplitterValueH);
+		RootSplit->OnResize(ActiveViewportRect);
+	}
+
+	SyncRectsToViewports();
+
+	if (t >= 1.0f)
+	{
+		if (ViewportAnimation.bSingleToQuad)
+			FinalizeFourSplitLayoutFromAnimation();
+		else
+			FinalizeSingleLayoutFromAnimation();
+	}
 }
 
 float UViewportManager::EaseInOutCubic(float t) const
 {
-    return 0.0f;
+	// 0~1 범위 입력 보장
+	t = std::clamp(t, 0.0f, 1.0f);
+	return (t < 0.5f) ? (4.0f * t * t * t) : (1.0f - std::pow(-2.0f * t + 2.0f, 3.0f) / 2.0f);
 }
 
 void UViewportManager::CreateAnimationSplitters()
@@ -336,8 +612,69 @@ void UViewportManager::RestoreOriginalLayout()
 
 void UViewportManager::FinalizeSingleLayoutFromAnimation()
 {
+	ViewportAnimation.bIsAnimating = false;
+
+	// (1) 드래그 캡처 중이면 해제
+	Capture = nullptr;
+
+	// (2) MinChildSize 원복
+	if (auto* RootSplit = Cast(QuadRoot))
+	{
+		RootSplit->MinChildSize = ViewportAnimation.SavedMinChildSizeV;
+		if (auto* HLeft = Cast(RootSplit->SideLT)) HLeft->MinChildSize = ViewportAnimation.SavedMinChildSizeH;
+		if (auto* HRight = Cast(RootSplit->SideRB)) HRight->MinChildSize = ViewportAnimation.SavedMinChildSizeH;
+	}
+
+	// (3) 싱글 모드 전환
+	ActiveIndex = ViewportAnimation.PromotedViewportIndex;
+	ViewportLayout = EViewportLayout::Single;
+
+	// (4) 싱글 루트 지정 + 전체 크기로 리사이즈
+	Root = Leaves[ActiveIndex];
+	if (Root)
+		Root->OnResize(ActiveViewportRect);
+
+	// (5) 저장
+	IniSaveSharedV = SplitterValueV;
+	IniSaveSharedH = SplitterValueH;
+
+	// (6) 뷰포트 동기화 (싱글만 활성)
+	SyncRectsToViewports();
 }
 
 void UViewportManager::FinalizeFourSplitLayoutFromAnimation()
 {
+	ViewportAnimation.bIsAnimating = false;
+	Capture = nullptr;
+
+	// 최소 사이즈 원복
+	if (auto* RootSplit = Cast(QuadRoot))
+	{
+		RootSplit->MinChildSize = ViewportAnimation.SavedMinChildSizeV;
+		if (auto* HLeft = Cast(RootSplit->SideLT))  HLeft->MinChildSize = ViewportAnimation.SavedMinChildSizeH;
+		if (auto* HRight = Cast(RootSplit->SideRB)) HRight->MinChildSize = ViewportAnimation.SavedMinChildSizeH;
+	}
+
+	// 최종 비율 고정
+	SplitterValueV = ViewportAnimation.TargetVRatio;
+	SplitterValueH = ViewportAnimation.TargetHRatio;
+
+	// 쿼드 레이아웃 확정
+	ViewportLayout = EViewportLayout::Quad;
+	Root = QuadRoot;
+
+	// 한 번 더 적용/배치
+	if (auto* RootSplit = Cast(QuadRoot))
+	{
+		RootSplit->SetEffectiveRatio(SplitterValueV);
+		if (auto* HLeft = Cast(RootSplit->SideLT))  HLeft->SetEffectiveRatio(SplitterValueH);
+		if (auto* HRight = Cast(RootSplit->SideRB)) HRight->SetEffectiveRatio(SplitterValueH);
+		RootSplit->OnResize(ActiveViewportRect);
+	}
+
+	SyncRectsToViewports();
+
+	// 다음 전환 대비 저장(선택)
+	IniSaveSharedV = SplitterValueV;
+	IniSaveSharedH = SplitterValueH;
 }

@@ -31,6 +31,8 @@ public:
 	// 루트 접근
 	void SetRoot(SWindow* InRoot) { Root = InRoot; }
 	SWindow* GetRoot() const { return Root; }
+	SWindow* GetQuadRoot() const { return QuadRoot; }
+
 
 	// 리프 Rect 수집
 	void GetLeafRects(TArray<FRect>& OutRects) const;
@@ -52,8 +54,16 @@ public:
 	//EViewportChange GetViewportChange() const { return ViewportChange; }
 	//void SetViewportChange(EViewportChange InChange) { ViewportChange = InChange; }
 
-	// 스플리터 비율 저장
+	
+	/**
+	* @brief 뷰포트 레이아웃 전환 시, 현재 다중뷰포트 스플리터의 비율을 저장합니다.
+	* 
+	*/
 	void PersistSplitterRatios();
+
+
+	void QuadToSingleAnimation();
+	void SingleToQuadAnimation();
 
 	// 애니메이션 시스템 공개 인터페이스
 	bool IsAnimating() const { return ViewportAnimation.bIsAnimating; }
@@ -164,6 +174,8 @@ private:
 
 	int32 LastPromotedIdx = -1;
 
+	float ViewLayoutChangeSplitterH = 0.5f;
+	float ViewLayoutChangeSplitterV = 0.5f;
 
 	//스플리터 포인터
 	SSplitter* SplitterV = nullptr;
@@ -181,7 +193,7 @@ private:
 	{
 		bool bIsAnimating = false;
 		float AnimationTime = 0.0f;
-		float AnimationDuration = 0.5f; // 애니메이션 지속 시간 (초)
+		float AnimationDuration = 0.2f; // 애니메이션 지속 시간 (초)
 
 		bool bSingleToQuad = true; // true: Single→Quad, false: Quad→Single
 
@@ -195,6 +207,14 @@ private:
 		float StartRatio = 0.5f;  // 시작 스플리터 비율
 		float TargetRatio = 0.5f; // 목표 스플리터 비율
 		int32 PromotedViewportIndex = 0;
+
+		// UViewportManager::FViewportAnimation 에 아래 필드 추가
+		float StartVRatio = 0.5f;
+		float StartHRatio = 0.5f;
+		float TargetVRatio = 0.5f;
+		float TargetHRatio = 0.5f;
+		int   SavedMinChildSizeV = 4;
+		int   SavedMinChildSizeH = 4;
 	};
 
 	FViewportAnimation ViewportAnimation;

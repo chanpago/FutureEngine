@@ -29,6 +29,8 @@
 #include "Manager/Viewport/ViewportManager.h"
 #include "Editor/EditorEngine.h"
 #include "public/Render/Viewport/ViewportClient.h"
+#include "Render/Viewport/Viewport.h"
+
 
 namespace
 {
@@ -160,13 +162,16 @@ void URenderer::Update(UEditor* Editor)
 {
 	RenderBegin();
 
-
-	if (UViewportManager::GetInstance().GetViewportLayout() == EViewportLayout::Single)
+	for (FViewport* Viewport : UViewportManager::GetInstance().GetViewports())
 	{
-		int32 ActiveIndex = UViewportManager::GetInstance().GetActiveIndex();
-		FRect SingleWindowRect = UViewportManager::GetInstance().GetActiveViewportRect();
-		D3D11_VIEWPORT LocalViewport = { SingleWindowRect.X,SingleWindowRect.Y, SingleWindowRect.W, SingleWindowRect.H, 0.0f, 1.0f };
+		if (Viewport->GetRect().W < 1.0f || Viewport->GetRect().H < 1.0f)
+		{
+			continue;
+		}
 
+		FRect SingleWindowRect = Viewport->GetRect();
+		const int32 ViewportToolBarHeight = 32;
+		D3D11_VIEWPORT LocalViewport = { SingleWindowRect.X,SingleWindowRect.Y + ViewportToolBarHeight, SingleWindowRect.W, SingleWindowRect.H - ViewportToolBarHeight, 0.0f, 1.0f };
 		GetDeviceContext()->RSSetViewports(1, &LocalViewport);
 
 		if (GWorld->GetWorldType() == EWorldType::PIE)
@@ -199,95 +204,48 @@ void URenderer::Update(UEditor* Editor)
 		GetDeviceContext()->RSSetScissorRects(1, &r);
 
 
+		// 카메라 세팅을 세이브합니다.
+		CheckAndSaveCameraSettings();
 
-		ID3D11RenderTargetView* rtv0 = DeviceResources->GetRenderTargetView();
-		ID3D11RenderTargetView* rtv1 = DeviceResources->GetIdBufferRTV();
-		ID3D11RenderTargetView* rtvs[] = { rtv0, rtv1 };
-		GetDeviceContext()->OMSetRenderTargets(2, rtvs, DeviceResources->GetDepthStencilView());
-
-		Cam = &Editor->GetCamera();
-
-		// Update aspect from viewport size and upload constants
+		// 카메라 세팅
+		Cam = Viewport->GetViewportClient()->GetCamera();
+		
+		// ★★★ 수정된 핵심 로직 ★★★
+		// 현재 뷰포트에 맞는 카메라의 데이터를 가져와 Constant Buffer를 직접 업데이트합니다.
 		if (Cam)
 		{
-			Cam->SetAspect(LocalViewport.Width / LocalViewport.Height);
-			if (Cam->GetCameraType() == ECameraType::ECT_Perspective)
-			{
-				Cam->UpdateMatrixByPers();
-			}
-			else
-			{
-				Cam->UpdateMatrixByOrth();
-			}
 			UpdateConstant(Cam->GetFViewProjConstants());
 		}
+
+
+		// =================================================================
+		// Pass 1 로직을 추가합니다.
+		// =================================================================
+		RenderLevel();
+
+		// =================================================================
+		// 여기에 데칼 렌더링(Pass 2) 로직을 추가합니다.
+		// =================================================================
+		// RenderDecals();  <-- 이런 함수를 만들어서 호출
+
+
+		// Transparent billboards (sprites), sort back-to-front per viewport
+		RenderBillboards(Cam ? Cam->GetLocation() : Editor->GetCameraLocation());
+
+		//Batch Line Rendering
+		Editor->RenderEditorBatched(Cam ? Cam->GetLocation() : Editor->GetCameraLocation());
+
+
+		// For text sorting, use per-viewport camera location if available
+		RenderText(Cam ? Cam->GetLocation() : Editor->GetCameraLocation());
 	}
-	if (UViewportManager::GetInstance().GetViewportLayout() == EViewportLayout::Quad)
-	{
-
-	}
-
-	// 카메라 세팅을 세이브합니다.
-	CheckAndSaveCameraSettings();
-
-
-	// =================================================================
-	// Pass 1 로직을 추가합니다.
-	// =================================================================
-	RenderLevel();
-
-	// =================================================================
-	// 여기에 데칼 렌더링(Pass 2) 로직을 추가합니다.
-	// =================================================================
-	// RenderDecals();  <-- 이런 함수를 만들어서 호출
-
-
-	// Transparent billboards (sprites), sort back-to-front per viewport
-	RenderBillboards(Cam ? Cam->GetLocation() : Editor->GetCameraLocation());
-
-	//Batch Line Rendering
-	Editor->RenderEditorBatched(Cam ? Cam->GetLocation() : Editor->GetCameraLocation());
 	
-
-	// For text sorting, use per-viewport camera location if available
-	RenderText(Cam ? Cam->GetLocation() : Editor->GetCameraLocation());
-		
 
 	if (CacheWorld)
 	{
 		GWorld = CacheWorld;
 		CacheWorld = nullptr;
 	}
-	
-
-	// Reset viewport/scissor to full window before UI/overlay pass
-	//{
-	//	DXGI_SWAP_CHAIN_DESC scd = {};
-	//	GetSwapChain()->GetDesc(&scd);
-	//
-	//	D3D11_VIEWPORT fullVp = {};
-	//	fullVp.TopLeftX = 0.0f;
-	//	fullVp.TopLeftY = 0.0f;
-	//	fullVp.Width    = (float)scd.BufferDesc.Width;
-	//	fullVp.Height   = (float)scd.BufferDesc.Height;
-	//	fullVp.MinDepth = 0.0f;
-	//	fullVp.MaxDepth = 1.0f;
-	//	GetDeviceContext()->RSSetViewports(1, &fullVp);
-	//
-	//	D3D11_RECT fullScissor;
-	//	fullScissor.left   = 0;
-	//	fullScissor.top    = 0;
-	//	fullScissor.right  = (LONG)scd.BufferDesc.Width;
-	//	fullScissor.bottom = (LONG)scd.BufferDesc.Height;
-	//	GetDeviceContext()->RSSetScissorRects(1, &fullScissor);
-	//
-	//	// Re-bind RTV/DSV for safety
-	//	ID3D11RenderTargetView* rtv = DeviceResources->GetRenderTargetView();
-	//	ID3D11RenderTargetView* rtvs[] = { rtv };
-	//	GetDeviceContext()->OMSetRenderTargets(1, rtvs, DeviceResources->GetDepthStencilView());
-	//
-	//
-	//}
 
 	UUIManager::GetInstance().Render();
 
@@ -299,7 +257,6 @@ void URenderer::Update(UEditor* Editor)
 		ReadbackIdBuffer();
 		RefreshTime = 0;
 	}
-
 }
 
 /**

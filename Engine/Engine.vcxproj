@@ -199,6 +199,7 @@
     <ClInclude Include="Public\DirectXTK\DirectXHelpers.h" />
     <ClInclude Include="Public\Render\UI\Widget\LevelTabBarWidget.h" />
     <ClInclude Include="Public\Render\UI\Widget\MainBarWidget.h" />
+    <ClInclude Include="Public\Render\UI\Widget\ViewportControlWidget.h" />
     <ClInclude Include="Public\Render\UI\Widget\ViewSettingsWidget.h" />
     <ClInclude Include="Public\Render\UI\Window\DetailWindow.h" />
     <ClInclude Include="Public\Render\UI\Window\LevelTabBarWindow.h" />
@@ -279,6 +280,7 @@
     <ClCompile Include="Private\Components\ShapeComponent.cpp" />
     <ClCompile Include="Private\Render\UI\Widget\LevelTabBarWidget.cpp" />
     <ClCompile Include="Private\Render\UI\Widget\MainBarWidget.cpp" />
+    <ClCompile Include="Private\Render\UI\Widget\ViewportControlWidget.cpp" />
     <ClCompile Include="Private\Render\UI\Window\LevelTabBarWindow.cpp" />
     <ClCompile Include="Private\Render\UI\Window\MainMenuWindow.cpp" />
     <ClCompile Include="Global\Name.cpp" />
@@ -309,7 +311,7 @@
     <ClCompile Include="Private\Render\UI\Widget\ViewSettingsWidget.cpp" />
     <ClCompile Include="Private\Render\UI\Window\DetailWindow.cpp" />
     <ClCompile Include="Private\Render\Viewport\Viewport.cpp" />
-    <ClCompile Include="Private\Render\Viewport\ViewportClinet.cpp" />
+    <ClCompile Include="Private\Render\Viewport\ViewportClient.cpp" />
     <ClCompile Include="Private\\Core\\Class.cpp" />
     <ClCompile Include="Private\\Core\\Object.cpp" />
     <ClCompile Include="Private\\Editor\\Axis.cpp" />
