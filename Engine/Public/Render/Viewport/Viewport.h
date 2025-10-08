@@ -21,7 +21,8 @@ public:
 
 	uint32       GetSizeX() const { return (uint32)max<LONG>(0, Rect.W); }
 	uint32       GetSizeY() const { return (uint32)max<LONG>(0, Rect.H); }
-	const FRect& GetRect()  const { return Rect; }
+	
+	FRect GetRect()  const { return Rect; }
 
 	// 보조
 	float  GetAspect()  const { return (GetSizeY() > 0) ? float(GetSizeX()) / float(GetSizeY()) : 1.0f; }

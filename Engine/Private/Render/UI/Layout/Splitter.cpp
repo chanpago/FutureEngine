@@ -68,6 +68,7 @@ void SSplitter::LayoutChildren()
 		SideLT->OnResize(top);
 		SideRB->OnResize(bottom);
 	}
+
 }
 
 bool SSplitter::OnMouseDown(FPoint Coord, int Button)
@@ -121,6 +122,7 @@ bool SSplitter::OnMouseDown(FPoint Coord, int Button)
 
 bool SSplitter::OnMouseMove(FPoint Coord)
 {
+	UE_LOG("0");
 	if (!bDragging)
 	{
 		return IsHandleHover(Coord);
@@ -129,7 +131,8 @@ bool SSplitter::OnMouseMove(FPoint Coord)
 	// Cross-drag: update both axes
 	if (bCrossDragging)
 	{
-		if (auto* Root = Cast(UViewportManager::GetInstance().GetRoot()))
+		UE_LOG("1");
+		if (auto* Root = Cast(UViewportManager::GetInstance().GetQuadRoot()))
 		{
 			// Vertical ratio from root rect
 			const int32 spanX = std::max(1L, Root->Rect.W);
@@ -176,7 +179,7 @@ bool SSplitter::OnMouseMove(FPoint Coord)
 	}
 
 	// Re-layout entire viewport tree so siblings using shared ratio update too
-	if (auto* Root = UViewportManager::GetInstance().GetRoot())
+	if (auto* Root = UViewportManager::GetInstance().GetQuadRoot())
 	{
 		const FRect current = Root->GetRect();
 		Root->OnResize(current);

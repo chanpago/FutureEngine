@@ -10,6 +10,7 @@
 #include "Render/UI/Layout/SplitterH.h"
 #include "public/Render/UI/Window/LevelTabBarWindow.h"
 #include "public/Render/UI/Window/MainMenuWindow.h"
+#include "Public/Manager/Input/InputManager.h"
 
 IMPLEMENT_CLASS(UViewportManager, UObject)
 
@@ -40,7 +41,7 @@ void UViewportManager::Initialize(FAppWindow* InWindow)
 	AppWindow = InWindow;
 
 	// 루트 윈도우에 새로운 윈도우를 할당합니다.
-	ViewportLayout = EViewportLayout::Single;
+	ViewportLayout = EViewportLayout::Quad;
 
 	// 0번 인덱스의 뷰포트로 초기화
 	ActiveIndex = 0;
@@ -114,37 +115,31 @@ void UViewportManager::Update()
 	const int MenuAndLevelHeight = UMainMenuWindow::GetInstance().GetMenuBarHeight() + ULevelTabBarWindow::GetInstance().GetLevelBarHeight();
 
 
-	// ViewportWidth는 실제로 렌더링이 될 영역의 뷰포트 입니다
+	// ActiveViewportRect는 실제로 렌더링이 될 영역의 뷰포트 입니다
 	const int32 RightPanelWidth = static_cast<int32>(UUIManager::GetInstance().GetRightPanelWidth());
 	const int32 ViewportWidth = Width - RightPanelWidth;
-
-	if (Width > 0 && Height > 0)
-	{
-		Root->OnResize(FRect{ 0, MenuAndLevelHeight, max(0, ViewportWidth), max(0, Height - MenuAndLevelHeight) });
-	}
 
 	ActiveViewportRect = FRect{ 0, MenuAndLevelHeight, max(0, ViewportWidth), max(0, Height - MenuAndLevelHeight) };
 
 
+	if (ViewportLayout == EViewportLayout::Quad)
+	{
+	    if (QuadRoot)
+	    {
+	        QuadRoot->OnResize(ActiveViewportRect); // FourSplit일 때만 실행됨
+	    }
+	}
+	else
+	{
+		if (Root)
+		{
+			Root->OnResize(ActiveViewportRect);
+		}
+	}
 
 
-	//FRect PreviousContent = Root->GetRect();
-
-	// 상단 메뉴 (메뉴, 레벨 바)
-	//float MenuAndLevelBarHeight = ULevelTabBarWindow::GetInstance().GetLevelBarHeight();
-
-
-	// 컨텐츠 영역: Y만 아래로 내리고, H는 줄이기
-	//FRect Content = {0, MenuAndLevelBarHeight, }
-
-	// 레벨정보 저장, 엑터생성, pie 메뉴
-
-
-
-	// 루트 윈도우 사이즈 재조정
-	// 여기 안에서 원근-직교(상하좌우앞뒤), 라이팅, 뷰포트 모드변경 등등 설정
-	//Root->OnResize(content);
-	
+	// 스플리터 드래그 처리 함수
+	TickInput();
 
 
 
@@ -160,6 +155,12 @@ void UViewportManager::Update()
 
 void UViewportManager::RenderOverlay()
 {
+	if (!QuadRoot)
+	{
+		return;
+	}
+	// 스플리터 선만 렌더링 (나머지 UI는 ViewportControlWidget에서 처리)
+	QuadRoot->OnPaint();
 }
 
 void UViewportManager::Release()
@@ -168,6 +169,56 @@ void UViewportManager::Release()
 
 void UViewportManager::TickInput()
 {
+	if (!QuadRoot)
+	{
+		return;
+	}
+
+	auto& InputManager = UInputManager::GetInstance();
+	const FVector& MousePosition = InputManager.GetMousePosition();
+	FPoint Point{ static_cast<LONG>(MousePosition.X), static_cast<LONG>(MousePosition.Y) };
+
+	SWindow* Target = nullptr;
+
+	if (Capture != nullptr)
+	{
+		// 드래그 캡처 중이면, 히트 테스트 없이 캡처된 위젯으로 고정
+		Target = static_cast<SWindow*>(Capture);
+	}
+	else
+	{
+		// 캡처가 아니면 화면 좌표로 히트 테스트
+		Target = (QuadRoot != nullptr) ? QuadRoot->HitTest(Point) : nullptr;
+	}
+
+	if (InputManager.IsKeyPressed(EKeyInput::MouseLeft) || (!Capture && InputManager.IsKeyDown(EKeyInput::MouseLeft)))
+	{
+		if (Target && Target->OnMouseDown(Point, 0))
+		{
+			Capture = Target;
+		}
+	}
+
+	const FVector& Delta = InputManager.GetMouseDelta();
+	if ((Delta.X != 0.0f || Delta.Y != 0.0f) && Capture)
+	{
+		Capture->OnMouseMove(Point);
+	}
+
+	if (InputManager.IsKeyReleased(EKeyInput::MouseLeft))
+	{
+		if (Capture)
+		{
+			Capture->OnMouseUp(Point, 0);
+			Capture = nullptr;
+		}
+	}
+
+	if (!InputManager.IsKeyDown(EKeyInput::MouseLeft) && Capture)
+	{
+		Capture->OnMouseUp(Point, 0);
+		Capture = nullptr;
+	}
 }
 
 void UViewportManager::BuildSingleLayout(int32 PromoteIdx)

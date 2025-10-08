@@ -11,6 +11,12 @@ void SWindow::OnResize(const FRect& InRect)
 
 void SWindow::OnPaint()
 {
+	// Draw a border for debugging purposes to visualize the window's rect.
+	ImDrawList* drawList = ImGui::GetBackgroundDrawList();
+	ImVec2 p0 = ImVec2((float)Rect.X, (float)Rect.Y);
+	ImVec2 p1 = ImVec2((float)(Rect.X + Rect.W), (float)(Rect.Y + Rect.H));
+	ImU32 borderColor = IM_COL32(255, 0, 0, 255); // Red border
+	drawList->AddRect(p0, p1, borderColor);
 }
 
 bool SWindow::IsHover(FPoint coord) const

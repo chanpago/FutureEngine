@@ -4,10 +4,6 @@
 // Splitter base class. Owns two child windows and divides Rect using SplitRatio.
 class SSplitter : public SWindow
 {
-
-
-
-
 public:
 	enum class EOrientation { Horizontal, Vertical };
 

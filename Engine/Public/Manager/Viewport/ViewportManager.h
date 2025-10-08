@@ -31,6 +31,8 @@ public:
 	// 루트 접근
 	void SetRoot(SWindow* InRoot) { Root = InRoot; }
 	SWindow* GetRoot() const { return Root; }
+	SWindow* GetQuadRoot() const { return QuadRoot; }
+
 
 	// 리프 Rect 수집
 	void GetLeafRects(TArray<FRect>& OutRects) const;
