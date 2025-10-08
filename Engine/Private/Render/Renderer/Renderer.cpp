@@ -169,11 +169,9 @@ void URenderer::Update(UEditor* Editor)
 			continue;
 		}
 
-		/**
-		 * @brief 현재 뷰포트의 화면을 잘라냅니다.
-		 */
 		FRect SingleWindowRect = Viewport->GetRect();
-		D3D11_VIEWPORT LocalViewport = { SingleWindowRect.X,SingleWindowRect.Y, SingleWindowRect.W, SingleWindowRect.H, 0.0f, 1.0f };
+		const int32 ViewportToolBarHeight = 32;
+		D3D11_VIEWPORT LocalViewport = { SingleWindowRect.X,SingleWindowRect.Y + ViewportToolBarHeight, SingleWindowRect.W, SingleWindowRect.H - ViewportToolBarHeight, 0.0f, 1.0f };
 		GetDeviceContext()->RSSetViewports(1, &LocalViewport);
 
 		if (GWorld->GetWorldType() == EWorldType::PIE)
@@ -208,6 +206,16 @@ void URenderer::Update(UEditor* Editor)
 
 		// 카메라 세팅을 세이브합니다.
 		CheckAndSaveCameraSettings();
+
+		// 카메라 세팅
+		Cam = Viewport->GetViewportClient()->GetCamera();
+		
+		// ★★★ 수정된 핵심 로직 ★★★
+		// 현재 뷰포트에 맞는 카메라의 데이터를 가져와 Constant Buffer를 직접 업데이트합니다.
+		if (Cam)
+		{
+			UpdateConstant(Cam->GetFViewProjConstants());
+		}
 
 
 		// =================================================================

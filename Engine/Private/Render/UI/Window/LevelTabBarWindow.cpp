@@ -2,7 +2,7 @@
 #include "public/Render/UI/Window/LevelTabBarWindow.h"
 #include "public/Render/UI/Window/MainMenuWindow.h"
 #include "public/Render/UI/Widget/LevelTabBarWidget.h"
-
+#include "Public/Render/UI/Widget/ViewportControlWidget.h"
 
 IMPLEMENT_SINGLETON(ULevelTabBarWindow)
 
@@ -35,6 +35,9 @@ void ULevelTabBarWindow::Initialize()
 	UE_LOG("MainMenuWindow: 메인 메뉴 윈도우가 초기화되었습니다");
 
 	WindowHeight = LevelTabBarWidget->GetLevelBarHeight();
+
+
+	AddWidget(NewObject<UViewportControlWidget>());
 }
 
 void ULevelTabBarWindow::Cleanup()

@@ -106,7 +106,7 @@ void UCamera::Update()
 	}
 
 	// TEST CODE
-	URenderer::GetInstance().UpdateConstant(ViewProjConstants);
+	// URenderer::GetInstance().UpdateConstant(ViewProjConstants);
 
 }
 

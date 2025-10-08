@@ -22,6 +22,8 @@ public:
 	bool        IsOrtho() const { return ViewType != EViewType::Perspective; }
 
 
+
+
 public:
 	void Tick() const;
 	void Draw(const FViewport* InViewport) const;

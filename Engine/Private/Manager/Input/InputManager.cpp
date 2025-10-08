@@ -3,7 +3,7 @@
 #include "Core/AppWindow.h"
 #include "public/Manager/Viewport/ViewportManager.h"
 #include "Render/UI/Layout/Window.h"
-
+#include "Public/Render/Viewport/Viewport.h"
 
 IMPLEMENT_CLASS(UInputManager, UObject)
 IMPLEMENT_SINGLETON(UInputManager)
@@ -147,7 +147,24 @@ void UInputManager::UpdateMousePosition(const FAppWindow* InWindow)
 		CurrentMousePosition.Y = static_cast<float>(MousePoint.y);
 	}
 
-	FRect vp = UViewportManager::GetInstance().GetRoot()->GetRect();
+
+	FRect vp;
+
+	if (UViewportManager::GetInstance().GetViewportLayout() == EViewportLayout::Single)
+	{
+		vp = UViewportManager::GetInstance().GetRoot()->GetRect();
+	}
+	else if (UViewportManager::GetInstance().GetViewportLayout() == EViewportLayout::Quad)
+	{
+		int32 ViewportIndex = UViewportManager::GetInstance().GetActiveIndex();
+		vp = UViewportManager::GetInstance().GetViewports()[ViewportIndex]->GetRect();
+	}
+	
+
+	// 뷰포트 툴바 만큼 뷰포트를 내려주어야함. 지금 일단 브런치 사이클이 너무길어져서 머지를 미리 땡기고 추후 수정할것
+	vp.Y += 32;
+	vp.H -= 32;
+
 
 	const float vw = std::max(1.0f, static_cast<float>(vp.W));
 	const float vh = std::max(1.0f, static_cast<float>(vp.H));
